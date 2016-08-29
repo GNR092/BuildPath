@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace CreadorDeParches
 {
@@ -51,63 +52,7 @@ namespace CreadorDeParches
 
         }
         #endregion
-        #region CMB_CargarArchivoClick
-        private void CMB_CargarArchivoClick(object sender, EventArgs e)
-        {
-            if (_FilesPatch.ShowDialog() != DialogResult.OK)
-                return;
-            TEXT_CargarArchivo.Text = _FilesPatch.FileName;
-            FileStream _Stream = new FileStream(_FilesPatch.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-            HashAlgorithm hash = new MD5CryptoServiceProvider();
-            byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
-            TEXT_MD5.Text = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
 
-        }
-        #endregion
-        #region CMB_AgregarClick
-        private void CMB_AgregarClick(object sender, EventArgs e)
-        {
-            if (!(TEXT_CargarArchivo.Text != string.Empty) || !(TEXT_MD5.Text != string.Empty))
-            {
-                MessageBox.Show("No hay nada que agregar", "Vacio", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            bool duplicado = false;
-            for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
-            {
-                if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(TEXT_CargarArchivo.Text) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == TEXT_MD5.Text)
-                    duplicado = true;
-            }
-            if (!duplicado)
-            {
-                int index = ParchesdataGridView.Rows.Add();
-                string directorio = Path.GetDirectoryName(TEXT_CargarArchivo.Text);
-                Checkfirst(TEXT_CargarArchivo.Text);
-
-                if (ComparePath(TEXT_CargarArchivo.Text))
-                {
-                    ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(TEXT_CargarArchivo.Text);
-                    ParchesdataGridView.Rows[index].Cells[1].Value = TEXT_MD5.Text;
-                }
-                else
-                {
-                    int count = Rootpatch.Length;
-                    string newdirectori = Path.GetDirectoryName(TEXT_CargarArchivo.Text).Remove(0, count + 1);
-                    ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(TEXT_CargarArchivo.Text);
-                    ParchesdataGridView.Rows[index].Cells[1].Value = TEXT_MD5.Text;
-                }
-
-
-
-
-            }
-            else
-            {
-                int num = (int)MessageBox.Show("No se puede Agregar artículo duplicado", "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-            }
-
-        }
-        #endregion
         #region remover/limpiar
         private void CMB_RemoverClick(object sender, EventArgs e)
         {
@@ -184,49 +129,123 @@ namespace CreadorDeParches
 
         private void ParchesdataGridView_DragDrop(object sender, DragEventArgs e)
         {
-            int total = 0;
-            int totalmax = 0;
-            pb_data.Value = 0;
-            foreach (string str in (string[])e.Data.GetData(DataFormats.FileDrop, false))
-            { totalmax++; }
-            foreach (string str in (string[])e.Data.GetData(DataFormats.FileDrop, false))
+            try
             {
-                total++;
-                pb_data.Value = (total * 100) / totalmax;
-                string md5;
-                bool duplicado = false;
-                FileStream _Stream = new FileStream(str, FileMode.Open, FileAccess.Read, FileShare.Read);
-                HashAlgorithm hash = new MD5CryptoServiceProvider();
-                byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
-                md5 = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
-
-                for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
+                int total = 0;
+                int totalmax = 0;
+                pb_data.Value = 0;
+                foreach (string str in (string[])e.Data.GetData(DataFormats.FileDrop, false))
                 {
-                    if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(str) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == md5)
-                        duplicado = true;
-                }
-                if (!duplicado)
-                {
-                    int index = ParchesdataGridView.Rows.Add();
-                    string directorio = Path.GetDirectoryName(str);
-                    Checkfirst(str);
-
-                    if (ComparePath(str))
+                    if (Directory.Exists(str))
                     {
-                        ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(str);
-                        ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                        string[] f = Directory.GetFiles(str, "*.*", SearchOption.AllDirectories);
+                        foreach (string files in f)
+                        {
+                            totalmax++;
+                        }
+
                     }
                     else
                     {
-                        int count = Rootpatch.Length;
-                        string newdirectori = Path.GetDirectoryName(str).Remove(0, count + 1);
-                        ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(str);
-                        ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                        totalmax++;
                     }
                 }
+                foreach (string str in (string[])e.Data.GetData(DataFormats.FileDrop, false))
+                {
+                    if (Directory.Exists(str))
+                    {
+                        string[] f = Directory.GetFiles(str, "*.*", SearchOption.AllDirectories);
+                        foreach (string files in f)
+                        {
+                            total++;
+                            pb_data.Value = (total * 100) / totalmax;
+                            string md5;
+                            bool duplicado = false;
+                            FileStream _Stream = new FileStream(files, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            HashAlgorithm hash = new MD5CryptoServiceProvider();
+                            byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
+                            md5 = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
+
+                            for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
+                            {
+                                if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(files) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == md5)
+                                    duplicado = true;
+                            }
+                            if (!duplicado)
+                            {
+                                int index = ParchesdataGridView.Rows.Add();
+                                string directorio = Path.GetDirectoryName(files);
+                                Checkfirst(files);
+
+                                if (ComparePath(files))
+                                {
+                                    ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(files);
+                                    ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                }
+                                else
+                                {
+                                    string path = Path.GetDirectoryName(files);
+                                    if (path.Contains(Rootpatch))
+                                    {
+                                        int count = Rootpatch.Length;
+                                        string newdirectori = Path.GetDirectoryName(files).Remove(0, count + 1);
+                                        ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(files);
+                                        ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                    }
+                                    
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        total++;
+                        pb_data.Value = (total * 100) / totalmax;
+                        string md5;
+                        bool duplicado = false;
+                        FileStream _Stream = new FileStream(str, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        HashAlgorithm hash = new MD5CryptoServiceProvider();
+                        byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
+                        md5 = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
+
+                        for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
+                        {
+                            if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(str) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == md5)
+                                duplicado = true;
+                        }
+                        if (!duplicado)
+                        {
+                            int index = ParchesdataGridView.Rows.Add();
+                            string directorio = Path.GetDirectoryName(str);
+                            Checkfirst(str);
+
+                            if (ComparePath(str))
+                            {
+                                ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(str);
+                                ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                            }
+                            else
+                            {
+                                int count = Rootpatch.Length;
+                                string newdirectori = Path.GetDirectoryName(str).Remove(0, count + 1);
+                                ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(str);
+                                ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                            }
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }//
+                }
+
+                MessageBox.Show("Se agregaron " + total + " de archivos con exito");
+            }
+            catch(Exception)
+            {
+                MessageBox.Show("Error al agregar archivo o carpeta El directorio \n"+Rootpatch+" \n no es el mismo que a agregado porfavor compruebe que este en la anterior direccion\n guarde el trabajo y reinicie el programa","ERROR",MessageBoxButtons.OK,MessageBoxIcon.Error);
             }
 
-            MessageBox.Show("Se agregaron " + total + " de archivos con exito");
         }
 
         #endregion
