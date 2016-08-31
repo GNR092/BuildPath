@@ -130,7 +130,7 @@ namespace CreadorDeParches
             this.CMB_Limpiar.Name = "CMB_Limpiar";
             this.CMB_Limpiar.Size = new System.Drawing.Size(75, 23);
             this.CMB_Limpiar.TabIndex = 9;
-            this.CMB_Limpiar.Text = "Limpiar";
+            this.CMB_Limpiar.Text = "Reiniciar";
             this.CMB_Limpiar.UseVisualStyleBackColor = true;
             this.CMB_Limpiar.Click += new System.EventHandler(this.CMB_LimpiarClick);
             // 
@@ -157,7 +157,7 @@ namespace CreadorDeParches
             // savePatchesFileDialog
             // 
             this.savePatchesFileDialog.DefaultExt = "txt,dat";
-            this.savePatchesFileDialog.FileName = "GameData.txt";
+            this.savePatchesFileDialog.Filter = "GameData Files|GameData.txt|TerraData Files|TerraData.txt";
             // 
             // notifyIcon1
             // 

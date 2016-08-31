@@ -22,10 +22,14 @@ namespace CreadorDeParches
     /// </summary>
     public partial class BuildPath : Form
     {
-        private readonly OpenFileDialog _FilePatch = new OpenFileDialog() { CheckFileExists = false, CheckPathExists = false, DereferenceLinks = true, Multiselect = false, Title = "Seleciona el archivo", Filter = "Text files (GameData.txt;GameData.dat;)|GameData.txt;GameData.dat" };
-        private readonly OpenFileDialog _FilesPatch = new OpenFileDialog() { CheckFileExists = false, CheckPathExists = false, DereferenceLinks = true, Multiselect = false, Title = "Seleciona el archivo", Filter = "All files (*.*)|*.*" };
+        private readonly OpenFileDialog _FilePatch = new OpenFileDialog() { CheckFileExists = false, CheckPathExists = false, DereferenceLinks = true, Multiselect = false, Title = "Seleciona el archivo", Filter = "GameData files |GameData.txt;GameData.dat|TerraData Files |TerraData.txt|All files |*.*" };
         private string Rootpatch;
         private bool primero = false;
+        private int actualcelda = 0;
+        private int actualizaron = 0;
+        private string Fileupdatelist = null;
+        private List<string> ArchivosActualizados = new List<string>();
+        private List<string> Nuevos = new List<string>();
         public BuildPath()
         {
 
@@ -77,6 +81,9 @@ namespace CreadorDeParches
         }
         private void CMB_LimpiarClick(object sender, EventArgs e)
         {
+            Rootpatch = null;
+            primero = false;
+            actualizaron = 0;
             ParchesdataGridView.Rows.Clear();
 
         }
@@ -157,7 +164,7 @@ namespace CreadorDeParches
                         string[] f = Directory.GetFiles(str, "*.*", SearchOption.AllDirectories);
                         foreach (string files in f)
                         {
-                            total++;
+                            
                             pb_data.Value = (total * 100) / totalmax;
                             string md5;
                             bool duplicado = false;
@@ -165,11 +172,14 @@ namespace CreadorDeParches
                             HashAlgorithm hash = new MD5CryptoServiceProvider();
                             byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
                             md5 = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
-
+                            _Stream.Close();
                             for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
                             {
                                 if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(files) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == md5)
+                                {
+                                    actualcelda = index;
                                     duplicado = true;
+                                }
                             }
                             if (!duplicado)
                             {
@@ -181,6 +191,8 @@ namespace CreadorDeParches
                                 {
                                     ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(files);
                                     ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                    Nuevos.Add(Path.GetFileName(files) + ":" + md5);
+                                    total++;
                                 }
                                 else
                                 {
@@ -191,15 +203,50 @@ namespace CreadorDeParches
                                         string newdirectori = Path.GetDirectoryName(files).Remove(0, count + 1);
                                         ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(files);
                                         ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                        Nuevos.Add(newdirectori + "\\" + Path.GetFileName(files) + ":" + md5);
+                                        total++;
                                     }
-                                    
+
+                                }
+                            }
+                            else
+                            {
+                                string directorio = Path.GetDirectoryName(files);
+                                Checkfirst(files);
+                                if (ComparePath(files))
+                                {
+                                    if (ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() != md5)
+                                    {
+                                        Fileupdatelist = "Antes: " + ParchesdataGridView.Rows[actualcelda].Cells[0].Value.ToString() + ":" + ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() + " Despues: " + Path.GetFileName(files)+":"+md5;
+                                        ArchivosActualizados.Add(Fileupdatelist);
+                                        ParchesdataGridView.Rows[actualcelda].Cells[0].Value = Path.GetFileName(files);
+                                        ParchesdataGridView.Rows[actualcelda].Cells[1].Value = md5;
+                                        actualizaron++;
+                                    }
+                                }
+                                else
+                                {
+                                    if (ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() != md5)
+                                    {
+                                        string path = Path.GetDirectoryName(files);
+                                        if (path.Contains(Rootpatch))
+                                        {
+                                            int count = Rootpatch.Length;
+                                            string newdirectori = Path.GetDirectoryName(files).Remove(0, count + 1);
+                                            Fileupdatelist = "Antes: " + ParchesdataGridView.Rows[actualcelda].Cells[0].Value.ToString() + ":" + ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() + " Despues: " + newdirectori + "\\" + Path.GetFileName(files) + ":" + md5;
+                                            ArchivosActualizados.Add(Fileupdatelist);
+                                            ParchesdataGridView.Rows[actualcelda].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(files);
+                                            ParchesdataGridView.Rows[actualcelda].Cells[1].Value = md5;
+                                            actualizaron++;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                     else
                     {
-                        total++;
+                        
                         pb_data.Value = (total * 100) / totalmax;
                         string md5;
                         bool duplicado = false;
@@ -207,11 +254,14 @@ namespace CreadorDeParches
                         HashAlgorithm hash = new MD5CryptoServiceProvider();
                         byte[] hashmd5 = Calcular.CalcularMD5(hash, _Stream);
                         md5 = BitConverter.ToString(hashmd5, 0).Replace("-", string.Empty);
-
+                        _Stream.Close();
                         for (int index = 0; index < ParchesdataGridView.Rows.Count; ++index)
                         {
                             if (ParchesdataGridView.Rows[index].Cells[0].Value.ToString() == Path.GetFileName(str) || ParchesdataGridView.Rows[index].Cells[1].Value.ToString() == md5)
+                            {
+                                actualcelda = index;
                                 duplicado = true;
+                            }
                         }
                         if (!duplicado)
                         {
@@ -223,6 +273,8 @@ namespace CreadorDeParches
                             {
                                 ParchesdataGridView.Rows[index].Cells[0].Value = Path.GetFileName(str);
                                 ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                Nuevos.Add(Path.GetFileName(str) + ":" + md5);
+                                total++;
                             }
                             else
                             {
@@ -230,22 +282,86 @@ namespace CreadorDeParches
                                 string newdirectori = Path.GetDirectoryName(str).Remove(0, count + 1);
                                 ParchesdataGridView.Rows[index].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(str);
                                 ParchesdataGridView.Rows[index].Cells[1].Value = md5;
+                                Nuevos.Add(newdirectori + "\\" + Path.GetFileName(str) + ":" + md5);
+                                total++;
                             }
                         }
                         else
                         {
-                            return;
+                            if (ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() != md5)
+                            {
+                                string directorio = Path.GetDirectoryName(str);
+                                Checkfirst(str);
+                                if (ComparePath(str))
+                                {
+                                    Fileupdatelist = "Antes: " + ParchesdataGridView.Rows[actualcelda].Cells[0].Value.ToString() + ":" + ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() + " Despues: " + Path.GetFileName(str) + ":" + md5;
+                                    ArchivosActualizados.Add(Fileupdatelist);
+                                    ParchesdataGridView.Rows[actualcelda].Cells[0].Value = Path.GetFileName(str);
+                                    ParchesdataGridView.Rows[actualcelda].Cells[1].Value = md5;
+                                    actualizaron++;
+                                }
+                            }
+                            else
+                            {
+                                if (ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() != md5)
+                                {
+                                    string path = Path.GetDirectoryName(str);
+                                    if (path.Contains(Rootpatch))
+                                    {
+                                        int count = Rootpatch.Length;
+                                        string newdirectori = Path.GetDirectoryName(str).Remove(0, count + 1);
+                                        Fileupdatelist = "Antes: " + ParchesdataGridView.Rows[actualcelda].Cells[0].Value.ToString() + ":" + ParchesdataGridView.Rows[actualcelda].Cells[1].Value.ToString() + " Despues: " + newdirectori + "\\" + Path.GetFileName(str) + ":" + md5;
+                                        ArchivosActualizados.Add(Fileupdatelist);
+                                        ParchesdataGridView.Rows[actualcelda].Cells[0].Value = newdirectori + "\\" + Path.GetFileName(str);
+                                        ParchesdataGridView.Rows[actualcelda].Cells[1].Value = md5;
+                                        actualizaron++;
+                                    }
+                                }
+                            }
                         }
                     }//
                 }
-
-                MessageBox.Show("Se agregaron " + total + " de archivos con exito");
+                MessageBox.Show("Se agregaron: " + total + " y se actualizaron: " + actualizaron);
             }
             catch(Exception)
             {
                 MessageBox.Show("Error al agregar archivo o carpeta El directorio \n"+Rootpatch+" \n no es el mismo que a agregado porfavor compruebe que este en la anterior direccion\n guarde el trabajo y reinicie el programa","ERROR",MessageBoxButtons.OK,MessageBoxIcon.Error);
             }
+            try
+            {
+                new Thread(() =>
+                {
+                    if (ArchivosActualizados.Count > 0)
+                    {
+                        var dir = Path.Combine(Application.StartupPath);
+                        using (StreamWriter file = new StreamWriter(dir + "\\Actua_" + DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss tt") + ".log"))
+                        {
+                            foreach (string line in ArchivosActualizados)
+                            {
+                                file.WriteLine(line);
+                            }
+                        }
+                        ArchivosActualizados = null;
+                    }
+                }) { IsBackground = true }.Start();
 
+                if (Nuevos.Count > 0)
+                {
+                    var dir = Path.Combine(Application.StartupPath);
+                    using (StreamWriter file = new StreamWriter(dir + "\\New_" + DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss tt") + ".log"))
+                    {
+                        foreach (string line in Nuevos)
+                        {
+                            file.WriteLine(line);
+                        }
+                    }
+                    Nuevos = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         #endregion
